@@ -1,7 +1,7 @@
 const express = require("express");
 const https = require("https");
 const fs = require("fs");
-const config = require("./config.json");
+const config = require("./defaults/config.json");
 
 const publicRouter = require("./public-router.js");
 const adminRouter = require("./admin-router.js");
