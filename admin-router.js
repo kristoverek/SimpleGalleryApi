@@ -4,7 +4,7 @@ const adminRouter = express.Router();
 
 //authentication
 adminRouter.use((req, res, next) => {
-    if(true) {
+    if(false) {
         res.status(403).send("Unauthorized");
     } else {
         next();
