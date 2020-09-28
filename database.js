@@ -17,9 +17,6 @@ const Gallery = sequelize.define('gallery', {
     },
     description: {
         type: DataTypes.STRING,
-    },
-    cover: {
-        type: DataTypes.STRING
     }
 }, {});
 
@@ -30,11 +27,15 @@ const Image = sequelize.define('image', {
     },
     description: {
         type: DataTypes.STRING,
+    },
+    uuid: {
+        type: DataTypes.STRING,
+        allowNull: false
     }
 }, {});
 
 Image.belongsTo(Gallery, {onDelete: "CASCADE"});
-// Gallery.belongsTo(Image, {onDelete: "CASCADE"});
+Gallery.belongsTo(Image, {onDelete: "CASCADE"});
 
 Gallery.sync();
 Image.sync();
@@ -46,10 +47,9 @@ Image.sync();
 //Add a new gallery
 exports.addGallery = async values => {
     try {
-        const result = await Gallery.create(values);
-        return result.toJSON();
+        return await Gallery.create(values);
     } catch(error) {
-        return error;
+        return false;
     }
 };
 
@@ -57,25 +57,38 @@ exports.modGallery = async () => {
 
 };
 
-exports.getGallery = async id => {
+exports.getGallery = async value => {
     try {
-        if(id) {
+        if(value) {
             return await Gallery.findAll({
-                where: {id: id}
+                where: value
             });
         } else {
             return await Gallery.findAll();
         }
     } catch(error) {
-        return error;
+        return false;
     }
 };
 
 exports.addImage = async values => {
     try {
-        const result = await Image.create(values);
-        return result.toJSON();
+        return await Image.create(values);
     } catch(error) {
-        return error;
+        return false;
+    }
+};
+
+exports.getImage = async value => {
+    try {
+        if(value) {
+            return await Image.findAll({
+                where: value
+            });
+        } else {
+            return await Image.findAll();
+        }
+    } catch(error) {
+        return false;
     }
 };
