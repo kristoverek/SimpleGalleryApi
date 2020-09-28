@@ -1,5 +1,6 @@
 const express = require("express");
 const db = require("./database.js");
+const imageProcessor = require("./image-processor.js");
 
 const adminRouter = express.Router();
 
@@ -18,30 +19,82 @@ adminRouter.use((req, res, next) => {
 // send help
 adminRouter.get("/", (req, res) => {
     const info = `SimpleGalleryApi endpoints:
-POST /admin/login
-POST /admin/upload
-POST /admin/gallery/add
-POST /admin/gallery/update
-POST /admin/gallery/delete
-POST /admin/image/add
-POST /admin/image/update
-POST /admin/image/delete`;
+POST   /admin/login
+POST   /admin/upload
+POST   /admin/gallery/add
+PUT    /admin/gallery/:id
+DELETE /admin/gallery/delete
+POST   /admin/image/add
+PUT    /admin/image/update
+DELETE /admin/image/delete`;
     res.send(info);
 });
 
 // add new gallery
-// params: name, description, coverUUID
+// params: name, description, coverUuid
 adminRouter.post("/gallery/add", async (req, res) => {
-    const {name, description, coverUUID} = req.body;
-    try {
-        const result = await db.addGallery(name, description, coverUUID);
+    if(!req.body.name) res.status(400).json({error: "No name specified"});
+
+    // set values to insert
+    const values = {};
+    values.name = req.body.name;
+    if(req.body.description) values.description = req.body.description;
+
+    // try to permanently save temporary image with uuid
+    if(req.body.coverUuid) {
+        const imageSaved = await imageProcessor.savePermanentImage(req.body.coverUuid);
+        if(!imageSaved) res.status(500).json({error: "Failed to save cover image"});
+        values.cover = req.body.coverUuid;
+    }
+
+    const result = await db.addGallery(values);
+    if(result) {
         res.json({
-            id: result.dataValues.id,
-            name: result.dataValues.name,
-            description: result.dataValues.description
+            id: result.id,
+            name: result.name,
+            description: result.description
         });
-    } catch(error) {
-        res.status(400).json({error: error.toString()});
+    } else {
+        // clean up saved image
+        if(imageSaved) imageProcessor.deletePermanentImage(req.body.coverUuid);
+        res.status(400).json({error: result});
+    }
+});
+
+// add a new image
+// params: name, description, galleryId, imageUuid
+adminRouter.post("/image/add", async (req, res) => {
+    if(!req.body.name) res.status(400).json({error: "No name specified"});
+    if(!req.body.imageUuid) res.status(400).json({error: "No imageUuid specified"});
+    if(!req.body.galleryId) res.status(400).json({error: "No galleryId specified"});
+
+    // check if gallery exists
+    const galleryQuery = await db.getGallery(req.body.galleryId);
+    if(!galleryQuery || galleryQuery.length <= 0) res.status(400).json({error: "No such gallery"});
+    
+    // set values to insert
+    const values = {};
+    values.name = req.body.name;
+    values.galleryId = req.body.galleryId;
+    if(req.body.description) values.description = req.body.description;
+
+    // try to permanently save temporary image with uuid
+    const imageSaved = await imageProcessor.savePermanentImage(req.body.imageUuid);
+    if(!imageSaved) res.status(500).json({error: "Failed to save image"});
+    values.uuid = req.body.imageUuid;
+
+    const result = await db.addImage(values);
+    if(result) {
+        res.json({
+            id: result.id,
+            name: result.name,
+            description: result.description,
+            galleryId: result.galleryId
+        });
+    } else {
+        // clean up saved image
+        imageProcessor.deletePermanentImage(req.body.imageUuid);
+        res.status(400).json({error: result});
     }
 });
 
