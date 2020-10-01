@@ -1,5 +1,6 @@
 {
     "port": 12345,
     "sslKey": "ssl/server.key",
-    "sslCert": "ssl/server.crt"
+    "sslCert": "ssl/server.crt",
+    "maxFileSize": 31457280
 }

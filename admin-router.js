@@ -1,6 +1,17 @@
 const express = require("express");
+const multer = require("multer");
 const db = require("./database.js");
 const imageProcessor = require("./image-processor.js");
+const config = require("./defaults/config.json");
+
+// multer setup for file upload
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: config.maxFileSize
+    }
+});
 
 const adminRouter = express.Router();
 
@@ -14,20 +25,6 @@ adminRouter.use((req, res, next) => {
     } else {
         next();
     }
-});
-
-// send help
-adminRouter.get("/", (req, res) => {
-    const info = `SimpleGalleryApi endpoints:
-POST   /admin/login
-POST   /admin/upload
-POST   /admin/gallery
-PUT    /admin/gallery/:galleryId
-DELETE /admin/gallery/:galleryid
-POST   /admin/image
-PUT    /admin/image/:imageId
-DELETE /admin/image/:imageId`;
-    res.send(info);
 });
 
 // add new gallery
@@ -65,7 +62,8 @@ adminRouter.post("/gallery", async (req, res) => {
         res.json({
             id: result.dataValues.id,
             name: result.dataValues.name,
-            description: result.dataValues.description
+            description: result.dataValues.description,
+            imageId: result.dataValues.imageId
         });
     } else {
         // clean up saved image
@@ -108,6 +106,15 @@ adminRouter.post("/image", async (req, res) => {
         // clean up saved image
         imageProcessor.deletePermanentImage(req.body.imageUuid);
         res.status(500).json({error: "Failed to add image"});
+    }
+});
+
+adminRouter.post("/upload", upload.single("image"), async (req, res) => {
+    const uuid = await imageProcessor.saveTemporaryImage(req.file.buffer);
+    if(uuid) {
+        res.json({uuid: uuid});
+    } else {
+        res.status(400).json({error: "Invalid image"});
     }
 });
 

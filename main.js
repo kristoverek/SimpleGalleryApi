@@ -11,8 +11,8 @@ const adminRouter = require("./admin-router.js");
 //
 const app = express();
 
-app.use("/public", publicRouter);
-app.use("/admin", adminRouter);
+app.use("/", publicRouter);
+app.use("/", adminRouter);
 
 //
 // ssl setup
